@@ -19,16 +19,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('token');
     if (token) {
       setIsAuthenticated(true);
-      // TODO: Fetch user data
     }
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login for:', email);
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
         email,
         password,
       });
+      
+      console.log('Login response:', response.data);
       
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
@@ -44,20 +46,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, name?: string) => {
     try {
-      // First register the user
+      console.log('Attempting registration with:', { email, name });
+      
+      // Register the user
       const registerResponse = await axios.post(`${import.meta.env.VITE_API_URL}/api/register`, {
         email,
         password,
         name
       });
 
-      if (registerResponse.data) {
-        // After successful registration, log them in
+      console.log('Registration response:', registerResponse.data);
+
+      if (registerResponse.data.token) {
+        // If registration returns a token, use it directly
+        localStorage.setItem('token', registerResponse.data.token);
+        setIsAuthenticated(true);
+      } else {
+        // If no token in registration response, try logging in
         await login(email, password);
       }
     } catch (error: any) {
       console.error('Registration error:', error.response?.data || error.message);
-      throw error;
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else {
+        throw error;
+      }
     }
   };
 

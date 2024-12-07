@@ -9,28 +9,46 @@ export default function Register() {
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { register } = useAuth();
+
+  const validateForm = () => {
+    if (!email) {
+      setError('Email is required');
+      return false;
+    }
+    if (!password) {
+      setError('Password is required');
+      return false;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return false;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
+    
+    if (!validateForm()) {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-
+    setIsLoading(true);
     try {
       await register(email, password, name);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'An error occurred during registration');
+      setError(err.message || 'An error occurred during registration');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -75,6 +93,7 @@ export default function Register() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            error={!!error && error.includes('email')}
           />
           <TextField
             margin="normal"
@@ -87,6 +106,7 @@ export default function Register() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            error={!!error && error.includes('password')}
             helperText="Password must be at least 6 characters long"
           />
           <TextField
@@ -100,19 +120,22 @@ export default function Register() {
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            error={!!error && error.includes('match')}
           />
           <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
+            disabled={isLoading}
           >
-            Sign Up
+            {isLoading ? 'Signing Up...' : 'Sign Up'}
           </Button>
           <Button
             fullWidth
             variant="text"
             onClick={() => navigate('/login')}
+            disabled={isLoading}
           >
             Already have an account? Sign In
           </Button>
