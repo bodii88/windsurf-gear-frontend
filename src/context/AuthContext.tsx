@@ -5,7 +5,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: any;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -29,28 +29,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         password,
       });
-      const { token } = response.data;
-      localStorage.setItem('token', token);
-      setIsAuthenticated(true);
-      // TODO: Set user data
-    } catch (error) {
-      console.error('Login error:', error);
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        setIsAuthenticated(true);
+      } else {
+        throw new Error('No token received');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error.response?.data || error.message);
       throw error;
     }
   };
 
-  const register = async (email: string, password: string) => {
+  const register = async (email: string, password: string, name?: string) => {
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+      // First register the user
+      const registerResponse = await axios.post(`${import.meta.env.VITE_API_URL}/api/register`, {
         email,
         password,
+        name
       });
-      const { token } = response.data;
-      localStorage.setItem('token', token);
-      setIsAuthenticated(true);
-      // TODO: Set user data
-    } catch (error) {
-      console.error('Registration error:', error);
+
+      if (registerResponse.data) {
+        // After successful registration, log them in
+        await login(email, password);
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error.response?.data || error.message);
       throw error;
     }
   };
